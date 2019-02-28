@@ -80,9 +80,18 @@ def create_app(
         for blueprint in blueprints:
             app.register_blueprint(blueprint)
 
+    app.errorhandler(jwt.errors.JWTValidationError)(_handle_error(403))
+    app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(409))
+
     return app
 
 
 def serve(app):
     config = app.confg
     waitress.serve(app, host=config["API_HOST"], port=config["API_PORT"])
+
+
+def _handle_error(code):
+    def wrapped(e):
+        return flask.jsonify({"message": str(e)}), code
+    return wrapped
