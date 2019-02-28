@@ -2,6 +2,7 @@ from typing import Iterable, Optional, Type
 
 import flask
 import flask_sqlalchemy
+import sqlalchemy.exc
 import waitress
 
 import flapi_jwt as jwt
@@ -82,6 +83,7 @@ def create_app(
 
     app.errorhandler(jwt.errors.JWTValidationError)(_handle_error(403))
     app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(409))
+    app.errorhandler(sqlalchemy.exc.IntegrityError)(_handle_error(409))
 
     return app
 
