@@ -75,9 +75,10 @@ def create_app(
         )
 
     if use_db is True:
-        if testing:
-            db.create_all()
         db.init_app(app)
+        if testing:
+            with app.app_context():
+                db.create_all()
 
     app.errorhandler(jwt.errors.JWTValidationError)(_handle_error(403))
     app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(422))
