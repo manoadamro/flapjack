@@ -75,11 +75,12 @@ def create_app(
         )
 
     if use_db is True:
+        if testing:
+            db.create_all()
         db.init_app(app)
 
     app.errorhandler(jwt.errors.JWTValidationError)(_handle_error(403))
     app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(422))
-    app.errorhandler(sqlalchemy.exc.IntegrityError)(_handle_error(422))
 
     return app
 
