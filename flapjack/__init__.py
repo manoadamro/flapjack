@@ -25,7 +25,9 @@ db = flask_sqlalchemy.SQLAlchemy()
 
 
 def response(body=None, code=200):
-    return flask.make_response(flask.jsonify(body or {}), code)
+    if body is None:
+        body = {}
+    return flask.make_response(flask.jsonify(body), code)
 
 
 class Config(flask.Config):
@@ -49,7 +51,6 @@ def create_app(
     config_class: Type[Config] = None,
     use_jwt: bool = True,
     use_db: bool = True,
-    blueprints: Optional[Iterable] = None,
 ):
     app = flask.Flask(__name__)
 
@@ -60,7 +61,6 @@ def create_app(
     if testing:
         test_db_uri = app.config["SQLALCHEMY_TEST_DATABASE_URI"]
         app.config["SQLALCHEMY_DATABASE_URI"] = test_db_uri
-        app.config["SEND_EMAILS"] = False
     app.testing = testing
 
     if use_jwt:
@@ -77,13 +77,9 @@ def create_app(
     if use_db is True:
         db.init_app(app)
 
-    if blueprints is not None:
-        for blueprint in blueprints:
-            app.register_blueprint(blueprint)
-
     app.errorhandler(jwt.errors.JWTValidationError)(_handle_error(403))
-    app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(409))
-    app.errorhandler(sqlalchemy.exc.IntegrityError)(_handle_error(409))
+    app.errorhandler(schema.errors.SchemaValidationError)(_handle_error(422))
+    app.errorhandler(sqlalchemy.exc.IntegrityError)(_handle_error(422))
 
     return app
 
@@ -93,7 +89,12 @@ def serve(app):
     waitress.serve(app, host=config["API_HOST"], port=config["API_PORT"])
 
 
-def _handle_error(code):
+def _handle_error(code, message=None, prefix=None):
     def wrapped(e):
-        return flask.jsonify({"message": str(e)}), code
+        msg = message
+        if msg is None:
+            msg = str(e)
+        if prefix is not None:
+            msg = f"{prefix}{msg}"
+        return flask.jsonify({"message": msg}), code
     return wrapped
